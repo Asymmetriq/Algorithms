@@ -51,6 +51,7 @@ bool Filter<T>::Set(const int& n, const double& prob)
 		return true;
 	}
 }
+
 template <class T>
 void Filter<T>::Add(const T& key)
 {
@@ -110,53 +111,22 @@ int main()
 			empty = true;
 		}
 		command.clear();
-		is >> command >> element >> prob; // сначала считывается команда
-		if (command == "set")
+		is >> command;
+		if (command == "set" && is >> element >> prob && !setFlag && element != 0 && prob != 0 && prob < 1)
 		{
-			if (!setFlag && element != 0 && prob != 0 && prob < 1)
-			{
-				setFlag = filter.Set(element, prob);
-			}
-			else
-			{
-				std::cout << "error" << std::endl;
-			}
+			setFlag = filter.Set(element, prob);
 		}
-		else if (command == "add")
+		else if (command == "add" && is >> element && is.rdbuf()->in_avail() == 0 && setFlag)
 		{
-			is >> element; // считывается аргумент
-			if (is.rdbuf()->in_avail() == 0 && setFlag)
-			{
-
-				filter.Add(element);
-			}
-			else
-			{
-				std::cout << "error" << std::endl;
-			}
+			filter.Add(element);
 		}
-		else if (command == "search")
+		else if (command == "search" && is >> element && is.rdbuf()->in_avail() == 0 && setFlag)
 		{
-			is >> element; // считывается аргумент
-			if (is.rdbuf()->in_avail() == 0 && setFlag)
-			{
-				std::cout << filter.Search(element) <<std::endl;
-			}
-			else
-			{
-				std::cout << "error" << std::endl;
-			}
+			std::cout << filter.Search(element) << std::endl;
 		}
-		else if (command == "print" && setFlag)
+		else if (command == "print" && is.rdbuf()->in_avail() == 0 && setFlag)
 		{
-			if (is.rdbuf()->in_avail() == 0) // если строка состоит только из print
-			{
-				filter.Print();
-			}
-			else
-			{
-				std::cout << "error" << std::endl;
-			}
+			filter.Print();
 		}
 		else
 		{
