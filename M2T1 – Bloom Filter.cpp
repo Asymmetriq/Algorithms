@@ -1,55 +1,45 @@
 #include <iostream>
 #include <cmath>
-#include <vector>
 #include <sstream>
 
 // 31-ое число Марсенна
-const unsigned long M = 2147483647; 
+const unsigned long M = 2147483647;
 // Массив простых чисел
 const unsigned long long Primes[] =
 {
-	0, 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 
-	89, 97, 101, 103, 107, 109, 113,	127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 
+	0, 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83,
+	89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179,
 	181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 263, 269, 271, 277, 281
 }; // 2 - первое простое число, считаем с элемента с индексом "1"
 
 // Фильтр Блума
 template <class T>
-class Filter 
+class Filter
 {
-	std::vector<bool> bits;
+	bool* bits = nullptr;
 	size_t size;
 	size_t numHashes;
 
 	// Семейство хэш-функций
-	size_t getHash(const T& key,const size_t& hashIndex);
+	size_t getHash(const T& key, const size_t& hashIndex);
 
 public:
 	Filter() {};
-	~Filter() {};
+	~Filter() { if (bits) delete[] bits; }
 
-	bool Set(const int& n, const double& p);
+	std::string Set(const size_t& n, const size_t& p);
 	void Add(const T& key);
-	void Print(); 
+	std::string Print();
 	bool Search(const T& key);
 };
 
 template <class T>
-bool Filter<T>::Set(const int& n, const double& prob)
+std::string Filter<T>::Set(const size_t& n, const size_t& l)
 {
-	size = round((-n * log2(prob)) / log(2));
-	numHashes = round(-log2(prob));
-	if (size == 0 || numHashes == 0)
-	{
-		std::cout << "error" << std::endl;
-		return false;
-	}
-	else
-	{
-		bits.resize(size);
-		std::cout << size << " " << numHashes << std::endl;
-		return true;
-	}
+	size = n;
+	numHashes = l;
+	bits = new bool[size] {0};
+	return std::to_string(size) + " " + std::to_string(numHashes);
 }
 
 template <class T>
@@ -77,13 +67,17 @@ bool Filter<T>::Search(const T& key)
 }
 
 template <class T>
-void Filter<T>::Print()
+std::string Filter<T>::Print()
 {
+	std::string out;
 	for (size_t i = 0; i < size; i++)
 	{
-		std::cout << bits[i];
+		if (bits[i])
+			out += "1";
+		else
+			out += "0";
 	}
-	std:: cout << std::endl;
+	return out;
 }
 
 // Семейство хэш-функций
@@ -93,46 +87,74 @@ size_t Filter<T>::getHash(const T& key, const size_t& hashIndex)
 	return (((hashIndex + 1) * (key % M) + Primes[hashIndex + 1]) % M) % size;
 }
 
+// Чтение всех данных в строку
+std::string Read()
+{
+	std::string data;
+	std::getline(std::cin, data, '\0');
+	return data + "\n";
+}
+
+// Расчёт параметров
+std::pair<size_t, size_t> Calculate(const int& n, const double& prob)
+{
+	size_t size = round((-n * log2(prob)) / log(2));
+	size_t numb = round(-log2(prob));
+	return { size, numb };
+}
 
 int main()
 {
+	std::istringstream is(Read());
+	std::ostringstream os;
+
 	Filter<uint64_t> filter;
-	std::string command, line;
+
+	std::string command;
 	uint64_t element;
 	double prob;
-
 	bool setFlag = false; // флаг показывает, задавался ли размер методом set()
 	bool empty = false; // флаг показывает, пуста ли поданная в поток ввода строка
-	while (std::getline(std::cin, line))
+
+	while (is >> command)
 	{
-		std::istringstream is(line);
-		if (is.rdbuf()->in_avail() == 0) // проверяем на пустоту
+		if (command.empty())
 		{
 			empty = true;
 		}
-		command.clear();
-		is >> command;
-		if (command == "set" && is >> element >> prob && !setFlag && element != 0 && prob != 0 && prob < 1)
+		if (command == "set" && is.peek() != '\n' 
+			&& is >> element && is.peek() != '\n' 
+			&& is >> prob && prob < 1 && is.peek() == '\n' && !setFlag)
 		{
-			setFlag = filter.Set(element, prob);
+			std::pair<size_t, size_t> params = Calculate(element, prob);
+			if (params.first != 0 && params.second != 0)
+			{
+				os << filter.Set(params.first, params.second) << std::endl;
+				setFlag = true;
+			}
+			else
+				os << "error" << std::endl;
 		}
-		else if (command == "add" && is >> element && is.rdbuf()->in_avail() == 0 && setFlag)
+		else if (command == "add" && is.peek() != '\n'
+			&& is >> element && is.peek() == '\n' && setFlag)
 		{
 			filter.Add(element);
 		}
-		else if (command == "search" && is >> element && is.rdbuf()->in_avail() == 0 && setFlag)
+		else if (command == "search" && is.peek() != '\n'
+			&& is >> element && is.peek() == '\n' && setFlag)
 		{
-			std::cout << filter.Search(element) << std::endl;
+			os << filter.Search(element) << std::endl;
 		}
-		else if (command == "print" && is.rdbuf()->in_avail() == 0 && setFlag)
+		else if (command == "print" && is.peek() == '\n' && setFlag)
 		{
-			filter.Print();
+			os << filter.Print() << std::endl;
 		}
 		else
 		{
 			if (!empty) // если строка не пустая и не является ни одной из команд
-				std::cout << "error" << std::endl;
+				os << "error" << std::endl;
 		}
 	}
+	std::cout << os.str();
 	return 0;
 }
